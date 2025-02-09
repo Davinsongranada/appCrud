@@ -27,7 +27,8 @@ app.add_middleware(
 class producto(BaseModel):
     title: str
     price: float
-    id: int
+    img: str
+    
 
 """
 print(producto.__dict__) 
@@ -39,12 +40,12 @@ All the attributes for Class/instance level
 
 # @APP.GET
 @app.get("/productos", tags=["CRUD"])
-async def getDate(search:str = "", page:int = Query(0), size:int = Query(0)):
+async def getDate(Search:str = "", PageSize:int = Query(0), Page:int = Query(0)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    offset = (page-1)*size
-    cursor.execute(f"SELECT * FROM productos WHERE title LIKE ? ORDER BY id LIMIT {size} OFFSET {offset}", ['%' + search + '%'])
-    if not page or not size:
+    offset = (Page-1)*PageSize
+    cursor.execute(f"SELECT * FROM productos WHERE title LIKE ? ORDER BY id LIMIT {PageSize} OFFSET {offset}", ['%' + Search + '%'])
+    if not Page or not PageSize:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="LLene los datos"
         )
@@ -54,7 +55,7 @@ async def getDate(search:str = "", page:int = Query(0), size:int = Query(0)):
         )
     else:
         status.HTTP_200_OK
-        
+
     rows = cursor.fetchall()
     column_names = [description[0] for description in cursor.description]
 
@@ -82,6 +83,9 @@ async def getId(id:int):
         result
     else:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail = 'No se encontró el producto' )   
+    
+    respuesta = jsonable_encoder(result)
+    return JSONResponse(content = respuesta)
 
 
 
@@ -91,7 +95,7 @@ async def getId(id:int):
 def createProduct(producto: producto):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(f'INSERT INTO productos(title, price) VALUES (?,?)',(producto.title, producto.price))
+    cursor.execute(f'INSERT INTO productos(title, price, images) VALUES (?,?,?)',(producto.title, producto.price, producto.img))
     conn.commit()
     respuesta = jsonable_encoder(producto)
     return JSONResponse(content = respuesta)
@@ -109,8 +113,8 @@ def editProduct(producto: producto, id: int):
     if result is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No se ha encontrado")
 
-    updateData = "UPDATE productos SET title=?, price=? WHERE id=?"
-    cursor.execute(updateData, (producto.title, producto.price, id))
+    updateData = "UPDATE productos SET title=?, price=?, images=? WHERE id=?"
+    cursor.execute(updateData, (producto.title, producto.price, producto.img, id))
     conn.commit()
     respuesta = jsonable_encoder(producto)
     return JSONResponse(content = respuesta)
