@@ -1,6 +1,5 @@
 from ctypes.wintypes import tagSIZE
-import sqlite3
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, status, Response
 from pydantic import BaseModel
 from db import get_db_connection
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,17 +120,18 @@ def editProduct(producto: producto, id: int):
 
 
 @app.delete("/productos/{id}", tags=["CRUD"])
-def deleteProduct(id:int):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+def deleteProduct(id:int, response:Response):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM productos WHERE id = ?", [id])
+    resultados = cursor.fetchone()
 
-        cursor.execute("DELETE FROM productos WHERE id = ?", [id])
-        cursor.fetchone()
-        conn.commit()
-        HTTPException(status.HTTP_200_OK, detail= "OK!")
-    except:
-        HTTPException(status.HTTP_404_NOT_FOUND, detail = "No hay producto con ese id")
+    if not resultados:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="El id no existe")
+
+    cursor.execute("DELETE FROM productos WHERE id = ?", [id])
+    conn.commit()
+    return HTTPException(status.HTTP_200_OK)
     
     
 
