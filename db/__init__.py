@@ -8,7 +8,6 @@ def table_exists():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM sqlite_master WHERE type='table' AND name='productos'")
     result = cursor.fetchone()
-
     return result is not None
 
 def createTabla():

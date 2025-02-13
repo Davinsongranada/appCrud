@@ -1,12 +1,9 @@
-from ctypes.wintypes import tagSIZE
-from fastapi import FastAPI, HTTPException, Query, status, Response
+from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel
 from db import get_db_connection
 from fastapi.middleware.cors import CORSMiddleware
-from http import HTTPStatus
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-
 
 
 origins = ["*"]
@@ -26,7 +23,7 @@ app.add_middleware(
 class producto(BaseModel):
     title: str
     price: float
-    img: str
+    image: str
     
 
 """
@@ -57,7 +54,7 @@ async def getDate(Search:str = "", PageSize:int = Query(0), Page:int = Query(0))
 
     rows = cursor.fetchall()
     column_names = [description[0] for description in cursor.description]
-
+    print(column_names)
     result = []
     for row in rows:
         result.append({column_names[i]: row[i] for i in range(len(row))})
@@ -71,9 +68,8 @@ async def getId(id:int):
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM productos WHERE id = ?", [id])
     rows = cursor.fetchall()
-
     column_names = [description[0] for description in cursor.description]
-
+    
     result = []
     for row in rows:
         result.append({column_names[i]: row[i] for i in range(len(row))})
@@ -81,9 +77,9 @@ async def getId(id:int):
     if result:
         result
     else:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail = 'No se encontró el producto' )   
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail = 'No se encontró el producto' )
     
-    respuesta = jsonable_encoder(result)
+    respuesta = jsonable_encoder(result[0])
     return JSONResponse(content = respuesta)
 
 
@@ -92,10 +88,14 @@ async def getId(id:int):
 # @APP.POST
 @app.post("/productos", tags=["CRUD"])
 def createProduct(producto: producto):
+    if not producto.title or not producto.price or not producto.image or not producto:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Llene todos los datos")
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(f'INSERT INTO productos(title, price, images) VALUES (?,?,?)',(producto.title, producto.price, producto.img))
+    cursor.execute(f'INSERT INTO productos(title, price, images) VALUES (?,?,?)',(producto.title, producto.price, producto.image))
     conn.commit()
+
     respuesta = jsonable_encoder(producto)
     return JSONResponse(content = respuesta)
     
@@ -113,14 +113,14 @@ def editProduct(producto: producto, id: int):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No se ha encontrado")
 
     updateData = "UPDATE productos SET title=?, price=?, images=? WHERE id=?"
-    cursor.execute(updateData, (producto.title, producto.price, producto.img, id))
+    cursor.execute(updateData, (producto.title, producto.price, producto.image, id))
     conn.commit()
     respuesta = jsonable_encoder(producto)
     return JSONResponse(content = respuesta)
 
 
 @app.delete("/productos/{id}", tags=["CRUD"])
-def deleteProduct(id:int, response:Response):
+def deleteProduct(id:int):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM productos WHERE id = ?", [id])
